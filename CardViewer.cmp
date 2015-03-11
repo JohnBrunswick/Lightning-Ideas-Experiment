@@ -1,0 +1,212 @@
+<aura:component controller="jmb.CaseCards" implements="force:appHostable">
+    <aura:attribute name="idea" type="Idea" default="{'sobjectType': 'Idea'}"/>
+    <aura:attribute name="ideas" type="Idea[]"/>
+    <aura:attribute name="profilePhotoUrl" type="String"/>
+    <aura:attribute name="ideaComments" type="IdeaComment[]"/>
+    <aura:attribute name="textareaNewIdeaValue" type="String" default="" />
+    <aura:attribute name="searchTerm" type="String" default="" />
+    
+    <!-- Setting a Community ID by deafult for this example - update to use your own
+         you can find the ID using http://workbench.developerforce.com/login.php and querying 
+         SELECT Body,CommunityId FROM Idea
+         for Ideas that you have created via the OOTB UI
+ -->
+    <aura:attribute name="newIdea" type="Idea"
+                    default="{ 'sobjectType': 'Idea',
+                             'Title': '',
+                             'Body': '',
+                             'CommunityId': '09aj00000005dCsAAI'
+                             }"/> 
+    <aura:attribute name="newIdeaComment" type="IdeaComment" default="{ 'sobjectType': 'IdeaComment', 'CommentBody': ''}"/>         
+    
+    
+    <!-- To load JS libraries in a particular order, I used the code from
+   https://github.com/rajaraodv/loadcomponent -->    
+    <jmb:load 
+              filesInParallel="/resource/bootstrapcssmin.sfcss,/resource/animate.sfcss"
+              filesInSeries="/resource/isotope.sfjs,/resource/jquerymin.sfjs,/resource/modernizr.sfjs,/resource/timeago.sfjs,/resource/bootstrapjs.sfjs" />
+    
+    <aura:handler event="jmb:staticResourcesLoaded" action="{!c.initScripts}"/>    
+    
+    <!-- This attribute will hold out JS object that represents our "cards" -->    
+    <aura:attribute name="objIsotope" type="Object" />
+    
+    <!-- Note - fixed header will only work in non S1 environments with our example -->
+    <div id="fixedheader">
+        <div class="titleheader">
+            <img src="/resource/lightningidealogo" class="logo"/>
+        </div>
+        
+        
+        <nav class="navbar navbar-default" role="navigation">
+            <div class="container">
+                
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapsible">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                </div>
+                
+                <div class="navbar-collapse collapse tabs" id="navbar-collapsible">
+                    
+                    <ul class="nav navbar-nav">
+                        <li class="tabitem active">
+                            <a id="buttonFilterFresh" href="#" onclick="{!c.getFilterFresh}" class="filterbutton">fresh<span></span></a>
+                        </li>
+                        <li class="tabitem">
+                            <a id="buttonFilterOpen" href="#" onclick="{!c.getFilterTop}" class="filterbutton">trending<span></span></a>
+                        </li>
+                        <li class="tabitem">
+                            <a id="buttonFilterComments" href="#" onclick="{!c.getFilterComments}" class="filterbutton">comments<span></span></a>
+                        </li> 
+                        <li class="tabitem">
+                            <a id="buttonFilterTotal" href="#" onclick="{!c.getFilterVoteTotal}" class="filterbutton">total votes<span></span></a>
+                        </li>          
+                    </ul>
+
+                </div>
+            </div>
+        </nav>               
+        
+    </div>       
+    
+    
+    <!-- Using Isotope library - if used commercially you will need a license.  Very inexpensive and worth it! -->    
+    <div id="grid-gallery" class="grid-gallery" style="-webkit-overflow-scrolling: touch;">
+        <section class="grid-wrap">
+            <div class="grid"> 
+                
+                <aura:iteration items="{!v.ideas}" var="p">
+                    <div class="card box-shadow-outset" onclick="{!c.openIdeaDetail}" data-ideaid="{!p.id}">
+                        
+                        
+                        <div class="carddetails">
+                            <img src="{!p.CreatorFullPhotoUrl}" class="profilephoto"/>
+                            
+                            <aura:if isTrue="{!p.NumComments > 0}">
+                                <div class="commentcount">                           
+                                    {!p.NumComments}
+                                </div>
+                            </aura:if>                                    
+                            
+                            <h3>{!p.title}</h3>
+                            <p>
+                                by {!p.CreatorName} <span class="timeago case-date" title="{!p.CreatedDate}">{!p.CreatedDate}</span> 
+                            </p>
+                        </div>
+                        
+                        <!-- The "chart" is the color that is applied to each card background -->
+                        <jmb:VoteChart ideaObject="{!p}"/>
+                        
+                        <!-- Hidden to be used for filtering - could be more elegant, but this is simple -->
+                        <p class="votescore" style="display:none">{!p.VoteScore}</p>
+                        <p class="numcomments" style="display:none">{!p.NumComments}</p>
+                        <p class="freshdate" style="display:none">{!p.CreatedDate}</p>
+                        <p class="votetotal" style="display:none">{!p.VoteTotal}</p>
+                    </div>
+                </aura:iteration>
+                
+            </div>
+        </section>
+    </div>
+    
+    <!-- Bootstrap modal used to show details for a given idea -->
+    <div class="modal fade" id="ideadetail">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header detail">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">{!v.idea.title}</h4>
+                    <jmb:renderHTML rawHTML="{!v.idea.Body}"/>
+                    <jmb:VoteBox parentIdeaId="{!v.idea.id}"/>  
+                    
+                </div>
+                <div class="modal-body comments">
+                    <div class="container-fluid">
+                        <aura:iteration items="{!v.ideaComments}" var="ic" indexVar="i">
+                            <div class="row comment fade-in" style="{!'-webkit-animation-delay:' + i + '00ms;'}">
+                                <div class="col-md-1"><img src="{!ic.CreatorSmallPhotoUrl}" class="commentphoto"/></div>
+                                <div class="col-md-11"><div class="ideacommentbody">{!ic.CommentBody}<br/>
+                                    <span class="timeago case-date" title="{!ic.CreatedDate}">{!ic.CreatedDate}</span></div>
+                                </div>
+                            </div>
+                        </aura:iteration>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    
+                    <div class="container-fluid">
+                        <div class="row commentcreate">
+                            <div class="col-xs-3 col-md-1"><img src="{!v.profilePhotoUrl}" class="commentphoto currentuser"/></div>
+                            <div class="col-xs-9 col-md-10">
+                                
+                                <div class="group">
+                                    <ui:inputText aura:id="commentBody" label="" value="{!v.newIdeaComment.CommentBody}" required="true"/>
+                                    <span class="highlight"></span>
+                                    <span class="bar"></span>
+                                    <label class="material">Your Comment</label>
+                                </div>
+                                
+                            </div>
+                            <div class="col-xs-12 col-md-1">
+                                <a href="#" onclick="{!c.postIdeaComment}" data-ideaid="{!v.idea.id}" class="linkstandard">Post</a>
+                                <!--<button type="button" class="btn btn-primary" onclick="{!c.postIdeaComment}" data-ideaid="{!v.idea.id}">Post</button>-->
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>                        
+                <div class="modal-footer" style="display:none">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->    
+    
+    
+    <!-- Bootstrap modal used for people to create ideas -->
+    <div class="modal fade" id="newidea" data-easein="fadeInLeft" data-easeout="fadeOutLeft" >
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Share an Idea</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="group">      
+                        <ui:inputText aura:id="createtitle" value="{!v.newIdea.Title}" required="true"/>
+                        <span class="highlight"></span>
+                        <span class="bar"></span>
+                        <label class="material">Name</label>
+                    </div>
+                    
+                    <p>
+                        
+                        <ui:inputText aura:id="createdescription" label="" placeholder="Details" value="{!v.newIdea.Body}" class="hidden" />
+                        
+                        <textarea rows="4" cols="50" onchange="{!c.changeField}" placeholder="Tell us about it..."></textarea>
+                        
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    
+                    <a id="postButton" href="#" onclick="{!c.postIdea}" class="linkstandard">Post</a>
+                    <a id="cancelButton" data-dismiss="modal" class="linkstandard grey">Cancel</a>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->        
+    
+    
+    <!-- Button to create an idea, the position is done via JS.  Not ideal, but it will check to see where
+      it is continously, as I could not get a clean way to get an onscroll JS event for the UI
+                     when using in S1 -->
+    <div class="row">
+        <button type="button" class="btn btn-primary circle" id="createidea" data-toggle="modal"
+                data-target="#newidea">+</button>        
+    </div>    
+    
+</aura:component>

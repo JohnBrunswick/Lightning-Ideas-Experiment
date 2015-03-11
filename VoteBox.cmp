@@ -1,0 +1,22 @@
+<aura:component controller="jmb.CaseCards">
+    <aura:attribute name="parentIdeaId" type="String"/>
+    <aura:attribute name="resultMessage" type="String"/>
+    <aura:attribute name="ideaVotes" type="Vote[]"/>
+    <aura:handler event="jmb:OpenIdea" action="{!c.handleOpenIdea}"/>
+    
+    <div class="votewrapper">
+        <div id="{!'votebox' + v.parentIdeaId}" data-parentid="{!v.parentIdeaId}">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-12 text-center">
+                        <div class="votestar">
+                            <img src="/resource/star50" class="staricon" onclick="{!c.submitLove}"/>
+                            <div class="votecount">{!v.ideaVotes.length}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</aura:component>
