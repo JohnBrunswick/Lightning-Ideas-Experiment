@@ -1,0 +1,6 @@
+<aura:component>
+    <aura:attribute name="rawHTML" type="String"/>
+    <aura:attribute name="refinedHTML" type="String"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+	<pre>{!v.rawHTML}</pre>
+</aura:component>
